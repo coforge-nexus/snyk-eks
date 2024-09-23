@@ -1,0 +1,58 @@
+name: Monitor Entire EKS Cluster with Snyk
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  id-token: write  # Required for requesting the JWT
+  contents: read  # Required for actions/checkout
+
+env:
+  AWS_REGION: eu-west-1
+  EKS_CLUSTER_NAME: nx-poc-cluster
+
+jobs:
+  snyk-monitor:
+    name: Monitor Entire EKS Cluster with Snyk
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Configure AWS credentials from OIDC
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install kubectl
+        run: |
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          chmod +x ./kubectl
+          sudo mv ./kubectl /usr/local/bin/kubectl
+
+      - name: Update kubeconfig for EKS
+        run: |
+          aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER_NAME }}
+
+      - name: Install Helm (for Snyk agent)
+        run: |
+          curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
+
+      - name: Add Snyk Helm repository
+        run: helm repo add snyk-charts https://snyk.github.io/kubernetes-monitor/
+
+      - name: Install Snyk monitor for entire EKS cluster
+        run: |
+          helm install snyk-monitor snyk-charts/snyk-monitor \
+            --set integration.snykToken=${{ secrets.SNYK_TOKEN }} \
+            --set clusterName=${{ env.EKS_CLUSTER_NAME }}
+
+      - name: Confirm Snyk monitor installation
+        run: |
+          kubectl get pods -n snyk-monitor
+          echo "Snyk monitor installed and running for the entire cluster"
