@@ -1,4 +1,4 @@
-name: Monitor Entire EKS Cluster with Snyk 
+name: Monitor Entire EKS Cluster with Snyk
 
 on:
   push:
