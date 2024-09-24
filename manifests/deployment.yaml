@@ -1,0 +1,29 @@
+apiVersion: apps/v1 
+kind: Deployment
+metadata:
+  name: nexus-java
+  labels: 
+     app: nexus-java
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nexus-java
+
+  template:
+    metadata:
+      labels:
+        app: nexus-java
+    spec:
+      containers:
+      - name: nexus-java
+        image: 442426854264.dkr.ecr.eu-west-1.amazonaws.com/nexus-repo:be0dc56-2024-09-18-08-56
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
